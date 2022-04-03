@@ -1,6 +1,6 @@
 const router = require('express').Router();
 const sequelize = require('../config/connection');
-const { Post, User, Comment } = require('../models');
+const { Post, User, Comment, Vote } = require('../models');
 
 router.get('/', (req, res) => {
     Post.findAll({
@@ -9,7 +9,7 @@ router.get('/', (req, res) => {
             'post_url',
             'title',
             'created_at',
-            [sequelize.literal('(SELECT COUNT(*) FROM vote WHERE post.id = vote.post_id)', 'vote_count')]
+            [sequelize.literal('(SELECT COUNT(*) FROM vote WHERE post.id = vote.post_id)'), 'vote_count']
         ],
         include: [
             {
@@ -19,13 +19,17 @@ router.get('/', (req, res) => {
                     model: User,
                     attributes: ['username']
                 }
+            },
+            {
+                model: User,
+                attributes: ['username']
             }
         ]
     })
     .then(dbPostData => {
-        console.log(dbPostData[0]);
+        const posts = dbPostData.map(post => post.get({ plain: true }));
         // pass a single post obj into the homepage template
-        res.render('homepage', dbPostData[0]);
+        res.render('homepage', { posts });
     })
     .catch(err => {
         console.log(err);
